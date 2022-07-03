@@ -1,0 +1,28 @@
+
+public class PhoneLoginActivity extends AppCompatActivity {
+    ActivityPhoneLoginBinding binding;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding=ActivityPhoneLoginBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+        getSupportActionBar().setTitle("Mobile Number Authentication");
+
+        //  ccp is country code picker
+        binding.ccp.registerCarrierNumberEditText(binding.number);
+
+        binding.next.setOnClickListener(v -> {
+            if (TextUtils.isEmpty(binding.number.getText().toString())){
+                Toast.makeText(this, "Enter Number...", Toast.LENGTH_SHORT).show();
+            }else if (binding.number.getText().toString().replace(" ","").length()!=10){
+                Toast.makeText(this, "Enter Correct No...", Toast.LENGTH_SHORT).show();
+            }else{
+                Intent intent = new Intent(PhoneLoginActivity.this, PhoneVerificationActivity.class);
+                intent.putExtra("number",binding.ccp.getFullNumberWithPlus().replace(" ",""));
+                startActivity(intent);
+                finish();
+            }
+        });
+    }
+}

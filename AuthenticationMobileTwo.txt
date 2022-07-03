@@ -1,0 +1,103 @@
+
+public class PhoneVerificationActivity extends AppCompatActivity {
+    ActivityPhoneVerificationBinding binding;
+    String number,otpId;
+    FirebaseAuth mAuth;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding=ActivityPhoneVerificationBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        mAuth=FirebaseAuth.getInstance();
+       // mAuth.getFirebaseAuthSettings().setAppVerificationDisabledForTesting(true);
+        number=getIntent().getStringExtra("number");
+        binding.phoneNumber.setText(number);
+
+        SendVerificationCode();
+
+
+
+        binding.submit.setOnClickListener(v -> {
+            if (TextUtils.isEmpty(binding.otp.getText().toString())){
+                Toast.makeText(this, "Enter otp", Toast.LENGTH_SHORT).show();
+            }else if (binding.otp.getText().toString().replace(" ","").length()!=6){
+                Toast.makeText(this, "Enter right otp", Toast.LENGTH_SHORT).show();
+            }
+            else {
+                PhoneAuthCredential credential = PhoneAuthProvider.getCredential(otpId, binding.otp.getText().toString().replace(" ",""));
+                signInWithPhoneAuthCredential(credential);
+            }
+        });
+
+        binding.wrongNumber.setOnClickListener(v -> {
+            startActivity(new Intent(PhoneVerificationActivity.this, PhoneLoginActivity.class));
+            finish();
+        });
+
+        binding.resend.setOnClickListener(v -> {
+            SendVerificationCode();
+        });
+
+
+
+    }
+
+    private void SendVerificationCode() {
+        new CountDownTimer(60000,1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                binding.resend.setText(""+millisUntilFinished/1000);
+                binding.resend.setEnabled(false);
+
+            }
+
+            @Override
+            public void onFinish() {
+                binding.resend.setText("Resend");
+                binding.resend.setEnabled(true);
+            }
+        }.start();
+
+        PhoneAuthOptions options =
+                PhoneAuthOptions.newBuilder(mAuth)
+                        .setPhoneNumber(number)       // Phone number to verify
+                        .setTimeout(60L, TimeUnit.SECONDS) // Timeout and unit
+                        .setActivity(this)                 // Activity (for callback binding)
+                        .setCallbacks(new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+
+                            @Override
+                            public void onCodeSent(@NonNull String s, @NonNull PhoneAuthProvider.ForceResendingToken forceResendingToken) {
+                                otpId=s;
+                            }
+
+                            @Override
+                            public void onVerificationCompleted(@NonNull PhoneAuthCredential phoneAuthCredential) {
+                                signInWithPhoneAuthCredential(phoneAuthCredential);
+                            }
+
+                            @Override
+                            public void onVerificationFailed(@NonNull FirebaseException e) {
+                                Toast.makeText(PhoneVerificationActivity.this, "Failed...", Toast.LENGTH_SHORT).show();
+                            }
+                        })          // OnVerificationStateChangedCallbacks
+                        .build();
+        PhoneAuthProvider.verifyPhoneNumber(options);
+
+    }
+
+    private void signInWithPhoneAuthCredential(PhoneAuthCredential credential) {
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            startActivity(new Intent(PhoneVerificationActivity.this, MainActivity.class));
+                            finish();
+                        } else {
+                            Toast.makeText(PhoneVerificationActivity.this, "Error...", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+}
